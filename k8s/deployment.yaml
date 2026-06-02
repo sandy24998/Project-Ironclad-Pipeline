@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: ironclad-app
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: ironclad-app
+
+  template:
+    metadata:
+      labels:
+        app: ironclad-app
+
+    spec:
+      containers:
+      - name: ironclad-app
+
+        image: sandy541998/ironclad-app:1.0.0
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 5000
+
+        env:
+        - name: APP_ENV
+          value: "dev"
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 20
