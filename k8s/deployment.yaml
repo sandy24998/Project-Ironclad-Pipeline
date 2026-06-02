@@ -32,7 +32,7 @@ spec:
       containers:
         - name: ironclad-app
 
-          image: sandy541998/ironclad-app:1.0.0
+          image: sandy541998/ironclad-app:1.0.1
           imagePullPolicy: Always
 
           ports:
@@ -66,4 +66,4 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
             timeoutSeconds: 3
-            failureThreshold: 3
+            failureThreshold: 1
