@@ -8,6 +8,7 @@ app = Flask(__name__)
 def home():
     return jsonify({
         "application": "Project Ironclad Pipeline",
+        "version": "1.0.1",
         "environment": os.getenv("APP_ENV", "dev"),
         "hostname": socket.gethostname(),
         "status": "running"
@@ -16,6 +17,7 @@ def home():
 @app.route("/health")
 def health():
     return jsonify({
+        "version": "1.0.1",
         "status": "healthy"
     })
 
