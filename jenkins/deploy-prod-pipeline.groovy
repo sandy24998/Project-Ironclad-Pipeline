@@ -237,10 +237,9 @@ stage('Verify Release Artifact') {
     }
 }
 
+
 stage('Create Git Release Tag') {
-
     steps {
-
         withCredentials([
             usernamePassword(
                 credentialsId: 'sandeep-token',
@@ -256,7 +255,7 @@ stage('Create Git Release Tag') {
             git tag ${RELEASE_VERSION}
 
             git push \
-            https://${GIT_USER}:${GIT_TOKEN}@github.com/sandy541998/Project-Ironclad-Pipeline.git \
+            https://${GIT_USER}:${GIT_TOKEN}@github.com/sandy24998/Project-Ironclad-Pipeline.git \
             ${RELEASE_VERSION}
             '''
         }
