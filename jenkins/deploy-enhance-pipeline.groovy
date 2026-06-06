@@ -85,6 +85,90 @@ pipeline {
                  sh 'echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin'
             }
         }
+
+        stage('Push Artifact') {
+            steps {
+                retry(2) {
+                    sh '''
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Published Image') {
+            steps {
+                sh '''
+                docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Deploy DEV') {
+            steps {
+                sh '''
+                chmod +x scripts/deploy-dev.sh
+                ./scripts/deploy-dev.sh ${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Verify DEV Deployment') {
+            steps {
+                sh '''
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n dev --timeout=${DEPLOYMENT_TIMEOUT}s
+                kubectl wait --for=condition=ready pod -l app=${DEPLOYMENT_NAME} -n dev --timeout=${DEPLOYMENT_TIMEOUT}s
+                '''
+            }
+        }
+
+        stage('QA Approval') {
+            steps {
+                input message: 'Promote build to QA?', ok: 'Deploy QA'
+            }
+        }
+
+        stage('Deploy QA') {
+            steps {
+                sh '''
+                chmod +x scripts/deploy-qa.sh
+                ./scripts/deploy-qa.sh ${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Verify QA Deployment') {
+            steps {
+                sh '''
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n qa --timeout=${DEPLOYMENT_TIMEOUT}s
+                kubectl wait --for=condition=ready pod -l app=${DEPLOYMENT_NAME} -n qa --timeout=${DEPLOYMENT_TIMEOUT}s
+                '''
+            }
+        }
+
+        stage('UAT Approval') {
+            steps {
+                input message: 'Promote build to UAT?', ok: 'Deploy UAT'
+            }
+        }
+
+        stage('Deploy UAT') {
+            steps {
+                sh '''
+                chmod +x scripts/deploy-uat.sh
+                ./scripts/deploy-uat.sh ${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Verify UAT Deployment') {
+            steps {
+                sh '''
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n uat --timeout=${DEPLOYMENT_TIMEOUT}s
+                kubectl wait --for=condition=ready pod -l app=${DEPLOYMENT_NAME} -n uat --timeout=${DEPLOYMENT_TIMEOUT}s
+                '''
+            }
+        }
     }
 
     post {
