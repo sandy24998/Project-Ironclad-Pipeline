@@ -264,26 +264,25 @@ pipeline {
     }
 
     post {
-
         success {
-
             echo '====================================='
             echo 'BUILD SUCCESSFUL'
+            echo "Artifact Published: ${IMAGE_NAME}:${IMAGE_TAG}"
             echo '====================================='
         }
-
         failure {
-
             echo '====================================='
             echo 'BUILD FAILED'
             echo '====================================='
         }
-
         always {
-
             sh '''
             docker logout || true
+            rm -rf venv || true
             '''
+        }
+        cleanup {
+            deleteDir()
         }
     }
 }
