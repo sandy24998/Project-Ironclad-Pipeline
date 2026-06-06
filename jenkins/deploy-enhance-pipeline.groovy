@@ -54,6 +54,47 @@ pipeline {
             }
         }
 
+        // ==========================================
+        //  NEW: SONARQUBE STATIC ANALYSIS QUALITY GATES
+        // ==========================================
+        stage('SonarQube Code Analysis') {
+            steps {
+                script {
+                    // Pulls the scanner tool configuration name from Jenkins global tools configuration
+                    def scannerHome = tool 'SonarQube-Scanner'
+                    
+                    // References your system-wide SonarQube configuration profile name
+                    withSonarQubeEnv('SonarQube-Server') {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                          -Dsonar.projectKey=Project-Ironclad-Pipeline \
+                          -Dsonar.projectName=Project-Ironclad-Pipeline \
+                          -Dsonar.sources=. \
+                          -Dsonar.exclusions=**/venv/**,**/tests/** \
+                          -Dsonar.python.version=3
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Quality Gate') {
+            options {
+                timeout(time: 10, unit: 'MINUTES') // Fails safely if the webhook connection drops
+            }
+            steps {
+                script {
+                    // Pauses execution thread waiting for the webhook callback hook from your container
+                    def qg = waitForQualityGate()
+                    if (qg.status != 'OK') {
+                        error "❌ Pipeline aborted due to SonarQube Quality Gate Failure! Status: ${qg.status}"
+                    }
+                }
+            }
+        }
+        // ==========================================
+
+
         stage('Build Docker Image') {
             steps {
                 sh '''
