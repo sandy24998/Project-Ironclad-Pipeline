@@ -169,6 +169,69 @@ pipeline {
                 '''
             }
         }
+
+        stage('Release Approval') {
+            steps {
+                script {
+                    env.RELEASE_VERSION = input(
+                        message: 'Approve Production Release',
+                        ok: 'Release',
+                        parameters: [
+                            string(
+                                name: 'VERSION',
+                                defaultValue: 'v1.0.1',
+                                description: 'Production Release Version'
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+
+        stage('Retag Release Image') {
+            steps {
+                sh '''
+                docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${RELEASE_VERSION}
+                '''
+            }
+        }
+
+        stage('Push Release Tag') {
+            steps {
+                retry(2) {
+                    sh '''
+                    docker push ${IMAGE_NAME}:${RELEASE_VERSION}
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Release Artifact') {
+            steps {
+                sh '''
+                docker pull ${IMAGE_NAME}:${RELEASE_VERSION}
+                '''
+            }
+        }
+
+        stage('Create Git Release Tag') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'sandeep-token',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                    git config user.name "Sandeep Pandit"
+                    git config user.email "54panditsandeep@gmail.com"
+                    git tag ${RELEASE_VERSION}
+                    git push https://${GIT_USER}:${GIT_TOKEN}@github.com/sandy24998/Project-Ironclad-Pipeline.git ${RELEASE_VERSION}
+                    '''
+                }
+            }
+        }        
+
     }
 
     post {
