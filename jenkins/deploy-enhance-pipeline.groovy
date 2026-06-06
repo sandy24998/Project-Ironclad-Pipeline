@@ -232,6 +232,35 @@ pipeline {
             }
         }        
 
+        stage('Deploy PROD') {
+            steps {
+                script {
+                    try {
+                        sh '''
+                        chmod +x scripts/deploy-prod.sh
+                        ./scripts/deploy-prod.sh ${RELEASE_VERSION}
+                        '''
+                    } catch (Exception e) {
+                        echo "Deployment failed, rolling back..."
+                        sh '''
+                        kubectl rollout undo deployment/${DEPLOYMENT_NAME} -n prod
+                        kubectl rollout status deployment/${DEPLOYMENT_NAME} -n prod --timeout=${DEPLOYMENT_TIMEOUT}s
+                        '''
+                        throw e
+                    }
+                }
+            }
+        }
+
+        stage('Verify PROD Deployment') {
+            steps {
+                sh '''
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n prod --timeout=${DEPLOYMENT_TIMEOUT}s
+                kubectl wait --for=condition=ready pod -l app=${DEPLOYMENT_NAME} -n prod --timeout=${DEPLOYMENT_TIMEOUT}s
+                '''
+            }
+        }
+
     }
 
     post {
