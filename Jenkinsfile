@@ -38,6 +38,18 @@ pipeline {
             }
         }
 
+        stage('Test GitHub SSH Access') {
+    steps {
+        sshagent(credentials: ['github-ssh']) {
+            sh '''
+                set -eu
+                ssh -o StrictHostKeyChecking=accept-new \
+                    -T git@github.com || test "$?" -eq 1
+            '''
+        }
+    }
+}
+
         stage('Run Unit Tests') {
             steps {
 

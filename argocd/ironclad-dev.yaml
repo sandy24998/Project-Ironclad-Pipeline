@@ -9,7 +9,7 @@ spec:
 
   source:
     repoURL: https://github.com/sandy24998/Project-Ironclad-Pipeline.git
-    targetRevision: feature/argocd-pipeline
+    targetRevision: gitops-dev
     path: k8s/overlays/dev
 
   destination:
