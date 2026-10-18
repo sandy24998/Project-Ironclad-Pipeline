@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ironclad-app
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: ironclad-app
+          env:
+            - name: APP_ENV
+              value: "dev"
