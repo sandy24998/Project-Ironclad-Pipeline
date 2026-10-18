@@ -38,6 +38,18 @@ pipeline {
             }
         }
 
+        stage('Test GitHub SSH Access') {
+    steps {
+        sshagent(credentials: ['github-ssh']) {
+            sh '''
+                set -eu
+                ssh -o StrictHostKeyChecking=accept-new \
+                    -T git@github.com || test "$?" -eq 1
+            '''
+        }
+    }
+}
+
         stage('Run Unit Tests') {
             steps {
 
@@ -108,6 +120,77 @@ pipeline {
         '''
     }
 }
+
+
+stage('Update DEV GitOps Tag') {
+    steps {
+        sshagent(credentials: ['github-ssh']) {
+            sh '''
+                set -eu
+
+                echo "====================================="
+                echo "Updating DEV GitOps Image Tag"
+                echo "IMAGE_TAG: ${IMAGE_TAG}"
+                echo "====================================="
+
+                # Verify required tools and variables
+                test -n "${IMAGE_TAG}"
+                command -v git
+                command -v kustomize
+
+                # Clone the GitOps branch
+                rm -rf gitops-work
+
+                git clone --branch gitops-dev --single-branch \
+                    git@github.com:sandy24998/Project-Ironclad-Pipeline.git \
+                    gitops-work
+
+                cd gitops-work/k8s/overlays/dev
+
+                # Update the image tag in DEV overlay
+                kustomize edit set image \
+                    sandy541998/ironclad-app=sandy541998/ironclad-app:${IMAGE_TAG}
+
+                echo "Updated DEV kustomization.yaml:"
+                cat kustomization.yaml
+
+                # Verify the rendered image
+                cd ../../../
+
+                echo "Rendered DEV image:"
+                kustomize build k8s/overlays/dev | grep 'image:'
+
+                if kustomize build k8s/overlays/dev | \
+                    grep -q 'IMAGE_TAG_PLACEHOLDER'; then
+                    echo "ERROR: Image placeholder still exists!"
+                    exit 1
+                fi
+
+                # Configure Git identity
+                git config user.name "Sandeep Pandit"
+                git config user.email "54panditsandeep@gmail.com"
+
+                # Stage the GitOps change
+                git add k8s/overlays/dev/kustomization.yaml
+                git diff --cached --check
+
+                # Skip commit if nothing changed
+                if git diff --cached --quiet; then
+                    echo "GitOps image tag is already up to date."
+                    exit 0
+                fi
+
+                # Commit and push to GitOps branch
+                git commit -m "chore(gitops): update DEV image to ${IMAGE_TAG}"
+
+                git push origin HEAD:gitops-dev
+
+                echo "DEV GitOps branch updated successfully!"
+            '''
+        }
+    }
+}
+
 
 stage('Deploy DEV') {
     steps {
