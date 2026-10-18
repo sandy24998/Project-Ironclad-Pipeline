@@ -4,11 +4,12 @@ kind: Kustomization
 namespace: dev
 
 resources:
-  - ../../base
+- ../../base
 
 images:
-  - name: sandy541998/ironclad-app
-    newTag: "7-cb710b0"
+- name: sandy541998/ironclad-app
+  newName: sandy541998/ironclad-app
+  newTag: 4-da0bdde
 
 patches:
-  - path: patch.yaml
+- path: patch.yaml
