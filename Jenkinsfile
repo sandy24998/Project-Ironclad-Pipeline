@@ -181,17 +181,41 @@ stage('Verify UAT Deployment') {
 stage('Release Approval') {
     steps {
         script {
-            env.RELEASE_VERSION = input(
+            def releaseVersion = input(
                 message: 'Approve Production Release',
                 ok: 'Release',
                 parameters: [
                     string(
                         name: 'VERSION',
-                        defaultValue: 'v1.0.1',
-                        description: 'Production Release Version'
+                        defaultValue: '',
+                        description: 'Enter a new release version, e.g. v1.0.2'
                     )
                 ]
+            ).trim()
+
+            // Accept only stable vMAJOR.MINOR.PATCH release tags.
+            if (!(releaseVersion ==~ /^v[0-9]+\.[0-9]+\.[0-9]+$/)) {
+                error("Invalid release version '${releaseVersion}'. Use vMAJOR.MINOR.PATCH, e.g. v1.0.2.")
+            }
+
+            def localTagStatus = sh(
+                returnStatus: true,
+                script: "git show-ref --verify --quiet 'refs/tags/${releaseVersion}'"
             )
+            if (localTagStatus == 0) {
+                error("Release tag '${releaseVersion}' already exists in the Jenkins checkout.")
+            }
+
+            // A Git/network error fails the shell step; an empty result means no matching remote tag.
+            def remoteTag = sh(
+                returnStdout: true,
+                script: "git ls-remote --refs origin 'refs/tags/${releaseVersion}'"
+            ).trim()
+            if (remoteTag) {
+                error("Release tag '${releaseVersion}' already exists on origin.")
+            }
+
+            env.RELEASE_VERSION = releaseVersion
         }
     }
 }
