@@ -38,7 +38,7 @@ pipeline {
             }
         }
 
-        stage('Test GitHub SSH Access') {
+        stage('Testing GitHub SSH Access') {
     steps {
         sshagent(credentials: ['github-ssh']) {
             sh '''
