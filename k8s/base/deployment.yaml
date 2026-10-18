@@ -1,47 +1,33 @@
+
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
   name: ironclad-app
   labels:
     app: ironclad-app
-
 spec:
   replicas: 2
-
   revisionHistoryLimit: 5
-
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
       maxSurge: 1
-
   selector:
     matchLabels:
       app: ironclad-app
-
   template:
     metadata:
       labels:
         app: ironclad-app
-
     spec:
       terminationGracePeriodSeconds: 30
-
       containers:
         - name: ironclad-app
-
-          image: sandy541998/ironclad-app:1.0.0
+          image: sandy541998/ironclad-app:IMAGE_TAG_PLACEHOLDER
           imagePullPolicy: Always
-
           ports:
             - containerPort: 5000
-
-          env:
-            - name: APP_ENV
-              value: "prod"
-
           resources:
             requests:
               cpu: "100m"
@@ -49,7 +35,6 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
-
           readinessProbe:
             httpGet:
               path: /health
@@ -58,7 +43,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-
           livenessProbe:
             httpGet:
               path: /health

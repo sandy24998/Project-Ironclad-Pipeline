@@ -112,8 +112,8 @@ pipeline {
 stage('Deploy DEV') {
     steps {
         sh '''
-        chmod +x scripts/deploy-dev.sh
-        ./scripts/deploy-dev.sh ${IMAGE_TAG}
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh dev ${IMAGE_TAG}
         '''
     }
 }
@@ -138,8 +138,8 @@ stage('QA Approval') {
 stage('Deploy QA') {
     steps {
         sh '''
-        chmod +x scripts/deploy-qa.sh
-        ./scripts/deploy-qa.sh ${IMAGE_TAG}
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh qa ${IMAGE_TAG}
         '''
     }
 }
@@ -164,8 +164,8 @@ stage('UAT Approval') {
 stage('Deploy UAT') {
     steps {
         sh '''
-        chmod +x scripts/deploy-uat.sh
-        ./scripts/deploy-uat.sh ${IMAGE_TAG}
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh uat ${IMAGE_TAG}
         '''
     }
 }
@@ -265,8 +265,8 @@ stage('Create Git Release Tag') {
 stage('Deploy PROD') {
     steps {
         sh '''
-        chmod +x scripts/deploy-prod.sh
-        ./scripts/deploy-prod.sh ${RELEASE_VERSION}
+        chmod +x scripts/deploy.sh
+        ./scripts/deploy.sh prod ${RELEASE_VERSION}
         '''
     }
 }
