@@ -192,22 +192,22 @@ stage('Update DEV GitOps Tag') {
 }
 
 
-stage('Deploy DEV') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh dev ${IMAGE_TAG}
-        '''
-    }
-}
+// stage('Deploy DEV') {
+//     steps {
+//         sh '''
+//         chmod +x scripts/deploy.sh
+//         ./scripts/deploy.sh dev ${IMAGE_TAG}
+//         '''
+//     }
+// }
 
-stage('Verify DEV Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n dev
-        '''
-    }
-}
+// stage('Verify DEV Deployment') {
+//     steps {
+//         sh '''
+//         kubectl rollout status deployment/ironclad-app -n dev
+//         '''
+//     }
+// }
 
 stage('QA Approval') {
     steps {
