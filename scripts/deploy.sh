@@ -1,5 +1,4 @@
-
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 ENVIRONMENT="${1:?Usage: deploy.sh <environment> <image-tag>}"
