@@ -9,7 +9,7 @@ resources:
 images:
 - name: sandy541998/ironclad-app
   newName: sandy541998/ironclad-app
-  newTag: 6-6cdcf1c
+  newTag: 8-6cdcf1c
 
 patches:
 - path: patch.yaml
