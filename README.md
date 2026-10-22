@@ -29,17 +29,15 @@ PR Validation (Automated Tests)
     ↓
 Code Review & Merge to Main
     ↓
-Docker Build & Push
+Jenkins Tests, Builds & Pushes Image
     ↓
-DEV Deployment
+Jenkins Updates DEV Overlay on gitops-dev
     ↓
-QA Deployment
+Argo CD Syncs DEV
     ↓
-UAT Deployment
+QA/UAT Approval → Jenkins Updates Environment Overlay → Argo CD Syncs
     ↓
-Git Tag Release
-    ↓
-PROD Deployment (Zero-Downtime Rolling Updates)
+Production Release Approval → PROD Overlay Update → Argo CD Syncs
 ```
 
 ## 📁 Project Structure
@@ -53,27 +51,18 @@ Project-Ironclad-Pipeline/
 │   └── Dockerfile                # Application container image
 ├── jenkins/                       # Jenkins pipeline definitions
 │   ├── pr-validation.groovy      # Pull request validation pipeline
-│   ├── build-pipeline.groovy     # Main build pipeline
-│   ├── build-and-push-pipeline.groovy  # Build and push to Docker Hub
-│   ├── deploy-dev-pipeline.groovy     # DEV environment deployment
-│   ├── deploy-qa-pipeline.groovy      # QA environment deployment
-│   ├── deploy-uat-pipeline.groovy     # UAT environment deployment
-│   └── deploy-prod-pipeline.groovy    # PROD environment deployment
+│   └── deploy-kustomize-pipeline.groovy # Alternative scripted GitOps pipeline
+├── argocd/                        # Argo CD Application definitions
+│   ├── ironclad-dev.yaml
+│   ├── ironclad-qa.yaml
+│   ├── ironclad-uat.yaml
+│   └── ironclad-prod.yaml
 ├── k8s/                          # Kubernetes manifests
-│   ├── deployment.yaml           # Base deployment configuration
-│   ├── service.yaml              # Service configuration
-│   ├── dev/deployment.yaml       # DEV environment override
-│   ├── prod/deployment.yaml      # PROD environment override
-│   ├── qa/deployment.yaml        # QA environment override
-│   └── uat/deployment.yaml       # UAT environment override
-├── scripts/                       # Deployment helper scripts
-│   ├── deploy-dev.sh            # DEV deployment script
-│   ├── deploy-qa.sh             # QA deployment script
-│   ├── deploy-uat.sh            # UAT deployment script
-│   └── deploy-prod.sh           # PROD deployment script
+│   ├── base/                     # Shared Deployment and Service
+│   └── overlays/                 # DEV, QA, UAT and PROD Kustomize configuration
 ├── docs/                         # Documentation
 │   └── git-workflow.md          # Git workflow documentation
-├── Jenkinsfile                  # Main Jenkins pipeline definition
+├── Jenkinsfile                  # Main build, promotion and GitOps pipeline
 ├── Jenkinsfile.pr-validation    # PR validation pipeline definition
 └── README.md                    # This file
 ```
@@ -83,7 +72,7 @@ Project-Ironclad-Pipeline/
 ### Prerequisites
 
 - GitHub account with repository access
-- Jenkins server configured with Git and Docker plugins
+- Jenkins server configured with Git and Docker plugins, Kustomize CLI, plus Docker Hub and GitHub credentials
 - Docker and Docker Hub account
 - kubectl configured to access Kubernetes cluster (Minikube for local development)
 - Python 3.12+ (for local testing)
@@ -133,7 +122,7 @@ Project-Ironclad-Pipeline/
   - Post results to PR
 
 ### 2. Main Build Pipeline
-- **Trigger**: When changes are merged to `main` branch
+- **Trigger**: On application-source branch updates, as configured in Jenkins
 - **Pipeline**: `Jenkinsfile`
 - **Steps**:
   - Checkout code
@@ -141,13 +130,15 @@ Project-Ironclad-Pipeline/
   - Run test suite
   - Build Docker image
   - Push to Docker Hub
-  - Deploy to DEV environment
+  - Update the DEV Kustomize image tag on the `gitops-dev` branch
 
 ### 3. Progressive Deployment
-After successful build and DEV deployment:
-- **QA Deployment**: Automated deployment to QA environment
-- **UAT Deployment**: Automated deployment to UAT environment
-- **PROD Deployment**: Triggered after UAT sign-off with zero-downtime rolling updates
+After successful image publication, Jenkins advances the same image through environments:
+- **DEV**: GitOps tag updated automatically; Argo CD auto-syncs the DEV Application
+- **QA/UAT**: Jenkins approval, then GitOps tag update; manually sync the Argo CD Application initially
+- **PROD**: Release approval and semantic image tag, then GitOps tag update; manually sync the Argo CD Application initially
+
+Configure the Jenkins job to use the root `Jenkinsfile` and exclude the `gitops-dev` branch from build triggers to avoid a build loop.
 
 ## 🌳 Git Workflow
 
@@ -223,17 +214,19 @@ docker run -p 5000:5000 -e APP_ENV=dev ironclad-app:latest
 - **Revision History**: Maintains last 5 deployments for quick rollback
 - **Termination Grace Period**: 30 seconds for graceful shutdown
 
-### Deploying via kubectl
+### Argo CD GitOps deployment
 
+The `gitops-dev` branch is the desired-state branch watched by all four Argo CD Applications. Each environment has a Kustomize overlay under `k8s/overlays/`. Jenkins builds and pushes an immutable image, then updates only the promoted environment's `newTag` in that branch. QA, UAT and PROD updates remain behind the corresponding Jenkins approval stages. DEV auto-syncs; QA, UAT and PROD Applications are configured for manual sync initially, so creating them or changing their Git tags cannot unexpectedly promote a release. Review the Argo CD diff and sync each environment after its Jenkins approval. Argo CD reconciles the cluster from Git; Jenkins must not run `kubectl apply`, `kubectl set image`, or rollout commands for Argo CD-managed workloads.
+
+Apply the Application definitions once using a kubectl context that can access the cluster:
 ```bash
-# DEV environment
-kubectl apply -f k8s/dev/deployment.yaml
-kubectl apply -f k8s/service.yaml
-
-# PROD environment
-kubectl apply -f k8s/prod/deployment.yaml
-kubectl apply -f k8s/service.yaml
+kubectl apply -f argocd/ironclad-dev.yaml
+kubectl apply -f argocd/ironclad-qa.yaml
+kubectl apply -f argocd/ironclad-uat.yaml
+kubectl apply -f argocd/ironclad-prod.yaml
 ```
+
+Before applying the QA/UAT/PROD Applications, set each overlay's initial `newTag` to the version currently intended for that environment, and inspect its Argo CD diff before syncing. Before running the deployment pipeline, ensure the `gitops-dev` branch contains the `k8s/overlays/` files and all four Application source paths. Configure Jenkins credentials `github-ssh` (SSH write access for GitOps updates), `sandeep-token` (release-tag push), and `dockerhub`, and configure the Jenkins job to build only application-source branches so GitOps commits do not trigger another image build.
 
 ## 🧪 Testing
 
