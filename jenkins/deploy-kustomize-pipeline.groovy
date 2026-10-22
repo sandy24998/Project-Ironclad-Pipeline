@@ -9,7 +9,8 @@ def updateGitOpsTag(String environment, String imageTag) {
     dir('gitops-repo') {
         withEnv([
             "GITOPS_ENV=${environment}",
-            "GITOPS_IMAGE_TAG=${imageTag}"
+            "GITOPS_IMAGE_TAG=${imageTag}",
+            "GITOPS_IMAGE_NAME=${env.IMAGE_NAME}"
         ]) {
             sh '''
                 set -eu
@@ -20,16 +21,17 @@ def updateGitOpsTag(String environment, String imageTag) {
                     exit 1
                 fi
 
-                tag_count="$(grep -Ec '^[[:space:]]*newTag:' "$file" || true)"
-                if [ "$tag_count" -ne 1 ]; then
-                    echo "ERROR: Expected exactly one newTag in $file; found $tag_count"
+                (
+                    cd "k8s/overlays/${GITOPS_ENV}"
+                    kustomize edit set image \
+                        "${GITOPS_IMAGE_NAME}=${GITOPS_IMAGE_NAME}:${GITOPS_IMAGE_TAG}"
+                )
+
+                if ! kubectl kustomize "k8s/overlays/${GITOPS_ENV}" | \
+                    grep -Fq "image: ${GITOPS_IMAGE_NAME}:${GITOPS_IMAGE_TAG}"; then
+                    echo "ERROR: Expected image tag was not rendered for ${GITOPS_ENV}"
                     exit 1
                 fi
-
-                sed -i -E \
-                    "s|^([[:space:]]*newTag:).*|\\1 \\"${GITOPS_IMAGE_TAG}\\"|" \
-                    "$file"
-                grep -F "newTag: \"${GITOPS_IMAGE_TAG}\"" "$file"
 
                 git config user.name "Jenkins"
                 git config user.email "jenkins@example.com"

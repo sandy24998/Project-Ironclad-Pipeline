@@ -72,7 +72,7 @@ Project-Ironclad-Pipeline/
 ### Prerequisites
 
 - GitHub account with repository access
-- Jenkins server configured with Git and Docker plugins, plus Docker Hub and GitHub credentials
+- Jenkins server configured with Git and Docker plugins, Kustomize CLI, plus Docker Hub and GitHub credentials
 - Docker and Docker Hub account
 - kubectl configured to access Kubernetes cluster (Minikube for local development)
 - Python 3.12+ (for local testing)

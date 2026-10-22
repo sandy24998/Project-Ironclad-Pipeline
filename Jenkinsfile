@@ -26,12 +26,6 @@ def updateGitOpsTag(String environment, String imageTag) {
                         exit 1
                     fi
 
-                    tag_count="$(grep -Ec '^[[:space:]]*newTag:' "$file" || true)"
-                    if [ "$tag_count" -ne 1 ]; then
-                        echo "ERROR: Expected exactly one newTag in $file; found $tag_count"
-                        exit 1
-                    fi
-
                     (
                         cd "k8s/overlays/${GITOPS_ENV}"
                         kustomize edit set image \
