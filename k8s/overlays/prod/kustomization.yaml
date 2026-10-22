@@ -11,4 +11,4 @@ patches:
 images:
 - name: sandy541998/ironclad-app
   newName: sandy541998/ironclad-app
-  newTag: v1.0.9
+  newTag: v1.0.10
