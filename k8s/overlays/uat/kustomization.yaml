@@ -4,7 +4,11 @@ kind: Kustomization
 namespace: uat
 
 resources:
-  - ../../base
+- ../../base
 
 patches:
-  - path: patch.yaml
+- path: patch.yaml
+images:
+- name: sandy541998/ironclad-app
+  newName: sandy541998/ironclad-app
+  newTag: 9-64e38f6
