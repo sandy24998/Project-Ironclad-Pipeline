@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1570" viewBox="0 0 1600 1570" role="img" aria-labelledby="title desc">
+  <title id="title">Project Ironclad end-to-end CI/CD and GitOps architecture</title>
+  <desc id="desc">Six illustrative snapshot cards show code review, Jenkins CI, Docker Hub, GitOps promotion, Argo CD applications, and Kubernetes workloads.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#111d32"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#173b6c"/>
+      <stop offset="1" stop-color="#174d52"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#71d3c2"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #e7eef8; }
+      .muted { fill: #9fb0c7; }
+      .title { font-size: 37px; font-weight: 700; }
+      .subtitle { font-size: 17px; }
+      .card { fill: #111d2d; stroke: #31445d; stroke-width: 1.5; }
+      .cardtitle { font-size: 22px; font-weight: 700; }
+      .body { font-size: 15px; }
+      .small { font-size: 13px; }
+      .tiny { font-size: 11px; }
+      .screen { fill: #0a111d; stroke: #2b3b50; stroke-width: 1; }
+      .screenbar { fill: #1c2a3d; }
+      .line { stroke: #31445d; stroke-width: 1; }
+      .green { fill: #70ddb0; }
+      .blue { fill: #82b5ff; }
+      .amber { fill: #ffd27a; }
+      .teal { fill: #71d3c2; }
+      .pillgreen { fill: #173c32; }
+      .pillblue { fill: #1b3354; }
+      .pillamber { fill: #47381d; }
+      .arrow { fill: none; stroke: #71d3c2; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1570" fill="url(#bg)"/>
+  <rect x="42" y="36" width="1516" height="132" rx="22" fill="url(#hero)" stroke="#2d6573"/>
+  <text x="80" y="91" class="title">Project Ironclad | CI → GitOps → Kubernetes</text>
+  <text x="82" y="128" class="subtitle">One tested image is promoted through DEV, QA, UAT and PROD; Git records desired state, Argo CD reconciles it.</text>
+  <rect x="1261" y="57" width="260" height="36" rx="18" class="pillamber"/>
+  <text x="1391" y="80" text-anchor="middle" class="small amber" font-weight="700">ILLUSTRATIVE SNAPSHOTS</text>
+  <text x="1391" y="124" text-anchor="middle" class="tiny muted">Mock interface panels, not live captures</text>
+
+  <!-- Step 1 -->
+  <rect x="55" y="205" width="700" height="365" rx="18" class="card"/>
+  <circle cx="91" cy="243" r="20" fill="#2763a5"/>
+  <text x="91" y="250" text-anchor="middle" font-size="18" font-weight="700">1</text>
+  <text x="124" y="250" class="cardtitle">Code change &amp; pull-request validation</text>
+  <text x="82" y="280" class="small muted">Developer branch → review → Jenkins PR checks</text>
+  <rect x="82" y="301" width="646" height="239" rx="10" class="screen"/>
+  <rect x="82" y="301" width="646" height="33" rx="10" class="screenbar"/>
+  <circle cx="101" cy="317" r="5" fill="#ff6b6b"/><circle cx="118" cy="317" r="5" fill="#ffd166"/><circle cx="135" cy="317" r="5" fill="#69d19c"/>
+  <text x="158" y="322" class="small">GitHub | Pull request #24</text>
+  <text x="101" y="362" class="body" font-weight="700">Add feature / fix / application update</text>
+  <text x="101" y="386" class="small muted">feature/*  →  main (after review)</text>
+  <line x1="101" y1="401" x2="705" y2="401" class="line"/>
+  <circle cx="111" cy="428" r="8" fill="#70ddb0"/>
+  <text x="132" y="433" class="small">Jenkins PR validation</text>
+  <rect x="546" y="414" width="142" height="27" rx="13" class="pillgreen"/>
+  <text x="617" y="432" text-anchor="middle" class="tiny green" font-weight="700">pytest passing</text>
+  <text x="101" y="471" class="small muted">Only merge after review and required checks pass.</text>
+  <text x="101" y="510" class="tiny blue">Snapshot cue: merged PR with a successful Jenkins check</text>
+
+  <!-- Step 2 -->
+  <rect x="845" y="205" width="700" height="365" rx="18" class="card"/>
+  <circle cx="881" cy="243" r="20" fill="#2763a5"/>
+  <text x="881" y="250" text-anchor="middle" font-size="18" font-weight="700">2</text>
+  <text x="914" y="250" class="cardtitle">Jenkins tests, builds &amp; publishes</text>
+  <text x="872" y="280" class="small muted">Root Jenkinsfile | build tag = build number + commit SHA</text>
+  <rect x="872" y="301" width="646" height="239" rx="10" class="screen"/>
+  <rect x="872" y="301" width="646" height="33" rx="10" class="screenbar"/>
+  <circle cx="891" cy="317" r="5" fill="#ff6b6b"/><circle cx="908" cy="317" r="5" fill="#ffd166"/><circle cx="925" cy="317" r="5" fill="#69d19c"/>
+  <text x="948" y="322" class="small">Jenkins | ironclad-pipeline #42</text>
+  <text x="893" y="361" class="small green">✓ Checkout and build metadata</text>
+  <text x="893" y="388" class="small green">✓ Python unit tests</text>
+  <text x="893" y="415" class="small green">✓ Docker build and push</text>
+  <text x="893" y="442" class="small green">✓ Published image verified</text>
+  <rect x="893" y="465" width="594" height="48" rx="7" fill="#132a29" stroke="#285c51"/>
+  <text x="910" y="486" class="tiny muted">IMAGE_TAG</text>
+  <text x="910" y="504" class="body teal" font-weight="700">42-a1b2c3d</text>
+  <text x="1375" y="495" class="tiny muted">example only</text>
+  <text x="893" y="530" class="tiny blue">Snapshot cue: successful Jenkins stage view and image tag</text>
+
+  <!-- Row 1 connector -->
+  <path d="M765 385 H825" class="arrow"/>
+
+  <!-- Step 3 -->
+  <rect x="845" y="625" width="700" height="365" rx="18" class="card"/>
+  <circle cx="881" cy="663" r="20" fill="#2763a5"/>
+  <text x="881" y="670" text-anchor="middle" font-size="18" font-weight="700">3</text>
+  <text x="914" y="670" class="cardtitle">Docker Hub stores the immutable artifact</text>
+  <text x="872" y="700" class="small muted">Publish once; promote the same build through environments</text>
+  <rect x="872" y="721" width="646" height="239" rx="10" class="screen"/>
+  <rect x="872" y="721" width="646" height="33" rx="10" class="screenbar"/>
+  <text x="895" y="743" class="small">Docker Hub | sandy541998/ironclad-app</text>
+  <text x="897" y="781" class="tiny muted">TAG</text>
+  <text x="1110" y="781" class="tiny muted">PURPOSE</text>
+  <line x1="895" y1="790" x2="1495" y2="790" class="line"/>
+  <text x="897" y="817" class="small teal">42-a1b2c3d</text>
+  <text x="1110" y="817" class="small">Build image used for DEV / QA / UAT</text>
+  <line x1="895" y1="832" x2="1495" y2="832" class="line"/>
+  <text x="897" y="859" class="small amber">v1.2.0</text>
+  <text x="1110" y="859" class="small">Release alias for approved PROD</text>
+  <rect x="895" y="881" width="592" height="45" rx="7" fill="#132a29" stroke="#285c51"/>
+  <text x="912" y="909" class="small">Production re-tags the tested image; it does not rebuild it.</text>
+  <text x="895" y="950" class="tiny blue">Snapshot cue: repository tags and image details</text>
+
+  <!-- Row 2 connector: step 3 to step 4 -->
+  <path d="M1195 575 V605" class="arrow"/>
+
+  <!-- Step 4 -->
+  <rect x="55" y="625" width="700" height="365" rx="18" class="card"/>
+  <circle cx="91" cy="663" r="20" fill="#2763a5"/>
+  <text x="91" y="670" text-anchor="middle" font-size="18" font-weight="700">4</text>
+  <text x="124" y="670" class="cardtitle">Jenkins promotes via GitOps commits</text>
+  <text x="82" y="700" class="small muted">Approval gates → update environment overlay → push gitops-dev</text>
+  <rect x="82" y="721" width="646" height="239" rx="10" class="screen"/>
+  <rect x="82" y="721" width="646" height="33" rx="10" class="screenbar"/>
+  <text x="103" y="743" class="small">GitHub | branch: gitops-dev | recent commits</text>
+  <text x="103" y="783" class="tiny muted">ENVIRONMENT</text>
+  <text x="250" y="783" class="tiny muted">IMAGE TAG</text>
+  <text x="470" y="783" class="tiny muted">GATE</text>
+  <line x1="103" y1="792" x2="706" y2="792" class="line"/>
+  <text x="103" y="818" class="small">DEV</text><text x="250" y="818" class="small teal">42-a1b2c3d</text><text x="470" y="818" class="small green">automatic</text>
+  <text x="103" y="846" class="small">QA</text><text x="250" y="846" class="small teal">42-a1b2c3d</text><text x="470" y="846" class="small amber">approval</text>
+  <text x="103" y="874" class="small">UAT</text><text x="250" y="874" class="small teal">42-a1b2c3d</text><text x="470" y="874" class="small amber">approval</text>
+  <text x="103" y="902" class="small">PROD</text><text x="250" y="902" class="small teal">v1.2.0</text><text x="470" y="902" class="small amber">release approval</text>
+  <rect x="103" y="918" width="594" height="27" rx="6" class="pillblue"/>
+  <text x="117" y="936" class="tiny blue">Changed path: k8s/overlays/&lt;environment&gt;/kustomization.yaml</text>
+
+  <!-- Row 2 connector: step 4 to step 5 -->
+  <path d="M825 805 H765" class="arrow"/>
+
+  <!-- Step 5 -->
+  <rect x="55" y="1045" width="700" height="365" rx="18" class="card"/>
+  <circle cx="91" cy="1083" r="20" fill="#2763a5"/>
+  <text x="91" y="1090" text-anchor="middle" font-size="18" font-weight="700">5</text>
+  <text x="124" y="1090" class="cardtitle">Argo CD watches four Kustomize overlays</text>
+  <text x="82" y="1120" class="small muted">One Git branch, separate Applications, destinations, and sync gates</text>
+  <rect x="82" y="1141" width="646" height="239" rx="10" class="screen"/>
+  <rect x="82" y="1141" width="646" height="33" rx="10" class="screenbar"/>
+  <text x="103" y="1163" class="small">Argo CD | Applications</text>
+  <text x="103" y="1200" class="tiny muted">APPLICATION / PATH</text>
+  <text x="455" y="1200" class="tiny muted">NAMESPACE</text>
+  <text x="585" y="1200" class="tiny muted">SYNC</text>
+  <line x1="103" y1="1209" x2="706" y2="1209" class="line"/>
+  <text x="103" y="1235" class="small">ironclad-dev</text><text x="265" y="1235" class="tiny muted">overlays/dev</text><text x="455" y="1235" class="small">dev</text><text x="585" y="1235" class="small green">auto</text>
+  <text x="103" y="1264" class="small">ironclad-qa</text><text x="265" y="1264" class="tiny muted">overlays/qa</text><text x="455" y="1264" class="small">qa</text><text x="585" y="1264" class="small amber">manual</text>
+  <text x="103" y="1293" class="small">ironclad-uat</text><text x="265" y="1293" class="tiny muted">overlays/uat</text><text x="455" y="1293" class="small">uat</text><text x="585" y="1293" class="small amber">manual</text>
+  <text x="103" y="1322" class="small">ironclad-prod</text><text x="265" y="1322" class="tiny muted">overlays/prod</text><text x="455" y="1322" class="small">prod</text><text x="585" y="1322" class="small amber">manual</text>
+  <text x="103" y="1360" class="tiny blue">Snapshot cue: capture actual Sync / Health status from your cluster UI</text>
+
+  <!-- Row 3 connector: step 5 to step 6 -->
+  <path d="M765 1225 H825" class="arrow"/>
+
+  <!-- Step 6 -->
+  <rect x="845" y="1045" width="700" height="365" rx="18" class="card"/>
+  <circle cx="881" cy="1083" r="20" fill="#2763a5"/>
+  <text x="881" y="1090" text-anchor="middle" font-size="18" font-weight="700">6</text>
+  <text x="914" y="1090" class="cardtitle">Kubernetes runs and health-checks the app</text>
+  <text x="872" y="1120" class="small muted">Argo CD applies resources; Kubernetes performs rolling updates</text>
+  <rect x="872" y="1141" width="646" height="239" rx="10" class="screen"/>
+  <rect x="872" y="1141" width="646" height="33" rx="10" class="screenbar"/>
+  <text x="895" y="1163" class="small">Kubernetes | Deployments and Pods</text>
+  <text x="895" y="1200" class="tiny muted">NAMESPACE</text><text x="1030" y="1200" class="tiny muted">APP_ENV</text><text x="1165" y="1200" class="tiny muted">REPLICAS</text><text x="1325" y="1200" class="tiny muted">HEALTH</text>
+  <line x1="895" y1="1209" x2="1495" y2="1209" class="line"/>
+  <text x="895" y="1237" class="small">dev</text><text x="1030" y="1237" class="small">dev</text><text x="1165" y="1237" class="small">1</text><text x="1325" y="1237" class="small green">/health</text>
+  <text x="895" y="1266" class="small">qa</text><text x="1030" y="1266" class="small">qa</text><text x="1165" y="1266" class="small">1</text><text x="1325" y="1266" class="small green">/health</text>
+  <text x="895" y="1295" class="small">uat</text><text x="1030" y="1295" class="small">uat</text><text x="1165" y="1295" class="small">2</text><text x="1325" y="1295" class="small green">/health</text>
+  <text x="895" y="1324" class="small">prod</text><text x="1030" y="1324" class="small">prod</text><text x="1165" y="1324" class="small">3</text><text x="1325" y="1324" class="small green">/health</text>
+  <text x="895" y="1360" class="tiny blue">Illustrative overlay settings; confirm actual replica counts in Git</text>
+
+  <!-- Flow direction guide -->
+  <path d="M405 1000 V1025" class="arrow"/>
+  <rect x="55" y="1440" width="1490" height="90" rx="14" fill="#15243a" stroke="#31445d"/>
+  <text x="82" y="1477" class="body" font-weight="700">Source of truth:</text>
+  <text x="220" y="1477" class="body">Git overlay → Argo CD → Kubernetes</text>
+  <text x="82" y="1508" class="small muted">Jenkins builds and proposes desired image versions. It must not kubectl-deploy workloads already managed by Argo CD.</text>
+  <text x="1530" y="1548" text-anchor="end" class="tiny muted">Project Ironclad | architecture overview | illustrative examples</text>
+</svg>

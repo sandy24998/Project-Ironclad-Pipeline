@@ -295,6 +295,9 @@ Returns health status (used by Kubernetes liveness/readiness probes)
 ## 📚 Additional Documentation
 
 - [Git Workflow Documentation](docs/git-workflow.md)
+- [End-to-End Architecture Walkthrough](docs/architecture-flow.md)
+
+![Project Ironclad CI/CD and GitOps architecture overview](docs/architecture-flow.svg)
 
 ## 👨‍💻 Contributing
 
