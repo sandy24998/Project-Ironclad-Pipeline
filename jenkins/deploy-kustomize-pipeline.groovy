@@ -1,3 +1,80 @@
+def updateGitOpsTag(String environment, String imageTag) {
+    if (!(environment in ['dev', 'qa', 'uat', 'prod'])) {
+        error("Unsupported GitOps environment: ${environment}")
+    }
+    if (!(imageTag ==~ /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/)) {
+        error("Invalid Docker image tag: ${imageTag}")
+    }
+
+    dir('gitops-repo') {
+        withEnv([
+            "GITOPS_ENV=${environment}",
+            "GITOPS_IMAGE_TAG=${imageTag}"
+        ]) {
+            sh '''
+                set -eu
+
+                file="k8s/overlays/${GITOPS_ENV}/kustomization.yaml"
+                if [ ! -f "$file" ]; then
+                    echo "ERROR: GitOps overlay not found: $file"
+                    exit 1
+                fi
+
+                tag_count="$(grep -Ec '^[[:space:]]*newTag:' "$file" || true)"
+                if [ "$tag_count" -ne 1 ]; then
+                    echo "ERROR: Expected exactly one newTag in $file; found $tag_count"
+                    exit 1
+                fi
+
+                sed -i -E \
+                    "s|^([[:space:]]*newTag:).*|\\1 \\"${GITOPS_IMAGE_TAG}\\"|" \
+                    "$file"
+                grep -F "newTag: \"${GITOPS_IMAGE_TAG}\"" "$file"
+
+                git config user.name "Jenkins"
+                git config user.email "jenkins@example.com"
+                git add "$file"
+
+                if git diff --cached --quiet; then
+                    echo "GitOps tag for ${GITOPS_ENV} is already ${GITOPS_IMAGE_TAG}"
+                else
+                    git commit -m "Deploy ${GITOPS_IMAGE_TAG} to ${GITOPS_ENV}"
+                fi
+            '''
+
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'sandeep-token',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_PASSWORD'
+                )
+            ]) {
+                writeFile(
+                    file: 'git-askpass.sh',
+                    text: '''#!/bin/sh
+case "$1" in
+    *Username*) printf '%s\\n' "$GIT_USERNAME" ;;
+    *Password*) printf '%s\\n' "$GIT_PASSWORD" ;;
+    *) exit 1 ;;
+esac
+'''
+                )
+                sh 'chmod 700 git-askpass.sh'
+                try {
+                    withEnv([
+                        "GIT_ASKPASS=${pwd()}/git-askpass.sh",
+                        'GIT_TERMINAL_PROMPT=0'
+                    ]) {
+                        sh 'git push origin HEAD:gitops-dev'
+                    }
+                } finally {
+                    sh 'rm -f git-askpass.sh'
+                }
+            }
+        }
+    }
+}
+
 pipeline {
 
     agent any
@@ -9,6 +86,7 @@ pipeline {
     options {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -102,182 +180,177 @@ pipeline {
         }
 
         stage('Verify Published Image') {
-    steps {
-        sh '''
-        docker pull ${IMAGE_NAME}:${IMAGE_TAG}
-        '''
-    }
-}
+            steps {
+                sh '''
+                docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
 
-stage('Deploy DEV') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh dev ${IMAGE_TAG}
-        '''
-    }
-}
+        stage('Checkout GitOps Branch') {
+            steps {
+                dir('gitops-repo') {
+                    deleteDir()
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/gitops-dev']],
+                        userRemoteConfigs: [[
+                            credentialsId: 'sandeep-token',
+                            url: 'https://github.com/sandy24998/Project-Ironclad-Pipeline.git'
+                        ]]
+                    ])
+                }
+            }
+        }
 
-stage('Verify DEV Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n dev
-        '''
-    }
-}
+        stage('Update DEV GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('dev', env.IMAGE_TAG)
+                }
+            }
+        }
 
-stage('QA Approval') {
-    steps {
-        input(
-            message: 'Promote build to QA?',
-            ok: 'Deploy QA'
-        )
-    }
-}
+        stage('QA Approval') {
+            steps {
+                input(
+                    message: 'Promote build to QA?',
+                    ok: 'Promote to QA'
+                )
+            }
+        }
 
-stage('Deploy QA') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh qa ${IMAGE_TAG}
-        '''
-    }
-}
+        stage('Update QA GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('qa', env.IMAGE_TAG)
+                }
+            }
+        }
 
-stage('Verify QA Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n qa
-        '''
-    }
-}
+        stage('UAT Approval') {
+            steps {
+                input(
+                    message: 'Promote build to UAT?',
+                    ok: 'Promote to UAT'
+                )
+            }
+        }
 
-stage('UAT Approval') {
-    steps {
-        input(
-            message: 'Promote build to UAT?',
-            ok: 'Deploy UAT'
-        )
-    }
-}
+        stage('Update UAT GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('uat', env.IMAGE_TAG)
+                }
+            }
+        }
 
-stage('Deploy UAT') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh uat ${IMAGE_TAG}
-        '''
-    }
-}
+        stage('Release Approval') {
+            steps {
+                script {
+                    def releaseVersion = input(
+                        message: 'Approve Production Release',
+                        ok: 'Release',
+                        parameters: [
+                            string(
+                                name: 'VERSION',
+                                defaultValue: '',
+                                description: 'New release version, e.g. v1.0.2'
+                            )
+                        ]
+                    ).trim()
 
-stage('Verify UAT Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n uat
-        '''
-    }
-}
+                    if (!(releaseVersion ==~ /^v[0-9]+\.[0-9]+\.[0-9]+$/)) {
+                        error("Invalid release version '${releaseVersion}'. Use vMAJOR.MINOR.PATCH, e.g. v1.0.2.")
+                    }
 
-stage('Release Approval') {
-    steps {
-        script {
-            env.RELEASE_VERSION = input(
-                message: 'Approve Production Release',
-                ok: 'Release',
-                parameters: [
-                    string(
-                        name: 'VERSION',
-                        defaultValue: 'v1.0.1',
-                        description: 'Production Release Version'
+                    def localTagStatus = sh(
+                        returnStatus: true,
+                        script: "git show-ref --verify --quiet 'refs/tags/${releaseVersion}'"
                     )
-                ]
-            )
+                    if (localTagStatus == 0) {
+                        error("Release tag '${releaseVersion}' already exists in the Jenkins checkout.")
+                    }
+                    if (localTagStatus != 1) {
+                        error("Could not check local Git tag '${releaseVersion}' (exit ${localTagStatus}).")
+                    }
+
+                    def remoteTag = sh(
+                        returnStdout: true,
+                        script: "git ls-remote --refs origin 'refs/tags/${releaseVersion}'"
+                    ).trim()
+                    if (remoteTag) {
+                        error("Release tag '${releaseVersion}' already exists on origin.")
+                    }
+
+                    env.RELEASE_VERSION = releaseVersion
+                }
+            }
         }
-    }
-}
 
-stage('Retag Release Image') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'dockerhub',
-                usernameVariable: 'DOCKER_USER',
-                passwordVariable: 'DOCKER_PASS'
-            )
-        ]) {
+        stage('Retag Release Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login \
+                    -u "$DOCKER_USER" \
+                    --password-stdin
 
-            sh '''
-            echo "$DOCKER_PASS" | docker login \
-            -u "$DOCKER_USER" \
-            --password-stdin
-
-            docker pull ${IMAGE_NAME}:${IMAGE_TAG}
-
-            docker tag \
-            ${IMAGE_NAME}:${IMAGE_TAG} \
-            ${IMAGE_NAME}:${RELEASE_VERSION}
-            '''
+                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker tag \
+                    ${IMAGE_NAME}:${IMAGE_TAG} \
+                    ${IMAGE_NAME}:${RELEASE_VERSION}
+                    '''
+                }
+            }
         }
-    }
-}
 
-stage('Push Release Tag') {
-    steps {
-        sh '''
-        docker push ${IMAGE_NAME}:${RELEASE_VERSION}
-        '''
-    }
-}
-
-stage('Verify Release Artifact') {
-    steps {
-        sh '''
-        docker pull ${IMAGE_NAME}:${RELEASE_VERSION}
-        '''
-    }
-}
-
-
-stage('Create Git Release Tag') {
-    steps {
-        withCredentials([
-            usernamePassword(
-                credentialsId: 'sandeep-token',
-                usernameVariable: 'GIT_USER',
-                passwordVariable: 'GIT_TOKEN'
-            )
-        ]) {
-
-            sh '''
-            git config user.name "Sandeep Pandit"
-            git config user.email "54panditsandeep@gmail.com"
-
-            git tag ${RELEASE_VERSION}
-
-            git push \
-            https://${GIT_USER}:${GIT_TOKEN}@github.com/sandy24998/Project-Ironclad-Pipeline.git \
-            ${RELEASE_VERSION}
-            '''
+        stage('Push Release Tag') {
+            steps {
+                sh 'docker push ${IMAGE_NAME}:${RELEASE_VERSION}'
+            }
         }
-    }
-}
 
-stage('Deploy PROD') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh prod ${RELEASE_VERSION}
-        '''
-    }
-}
+        stage('Verify Release Artifact') {
+            steps {
+                sh 'docker pull ${IMAGE_NAME}:${RELEASE_VERSION}'
+            }
+        }
 
-stage('Verify PROD Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n prod
-        '''
-    }
-}
+        stage('Create Git Release Tag') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'sandeep-token',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                    git config user.name "Sandeep Pandit"
+                    git config user.email "54panditsandeep@gmail.com"
+                    git tag ${RELEASE_VERSION}
+                    git push \
+                    https://${GIT_USER}:${GIT_TOKEN}@github.com/sandy24998/Project-Ironclad-Pipeline.git \
+                    ${RELEASE_VERSION}
+                    '''
+                }
+            }
+        }
+
+        stage('Update PROD GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('prod', env.RELEASE_VERSION)
+                }
+            }
+        }
 
     }
 

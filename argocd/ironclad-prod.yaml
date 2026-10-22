@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ironclad-prod
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/sandy24998/Project-Ironclad-Pipeline.git
+    targetRevision: gitops-dev
+    path: k8s/overlays/prod
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

@@ -1,3 +1,67 @@
+def updateGitOpsTag(String environment, String imageTag) {
+    if (!(environment in ['dev', 'qa', 'uat', 'prod'])) {
+        error("Unsupported GitOps environment: ${environment}")
+    }
+    if (!(imageTag ==~ /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/)) {
+        error("Invalid Docker image tag: ${imageTag}")
+    }
+
+    dir("gitops-${environment}") {
+        deleteDir()
+        sshagent(credentials: ['github-ssh']) {
+            withEnv([
+                "GITOPS_ENV=${environment}",
+                "GITOPS_IMAGE_TAG=${imageTag}",
+                "GITOPS_IMAGE_NAME=${env.IMAGE_NAME}"
+            ]) {
+                sh '''
+                    set -eu
+
+                    git clone --branch gitops-dev --single-branch \
+                        git@github.com:sandy24998/Project-Ironclad-Pipeline.git .
+
+                    file="k8s/overlays/${GITOPS_ENV}/kustomization.yaml"
+                    if [ ! -f "$file" ]; then
+                        echo "ERROR: GitOps overlay not found: $file"
+                        exit 1
+                    fi
+
+                    tag_count="$(grep -Ec '^[[:space:]]*newTag:' "$file" || true)"
+                    if [ "$tag_count" -ne 1 ]; then
+                        echo "ERROR: Expected exactly one newTag in $file; found $tag_count"
+                        exit 1
+                    fi
+
+                    (
+                        cd "k8s/overlays/${GITOPS_ENV}"
+                        kustomize edit set image \
+                            "${GITOPS_IMAGE_NAME}=${GITOPS_IMAGE_NAME}:${GITOPS_IMAGE_TAG}"
+                    )
+
+                    if ! kustomize build "k8s/overlays/${GITOPS_ENV}" | \
+                        grep -Fq "image: ${GITOPS_IMAGE_NAME}:${GITOPS_IMAGE_TAG}"; then
+                        echo "ERROR: Expected image tag was not rendered for ${GITOPS_ENV}"
+                        exit 1
+                    fi
+
+                    git config user.name "Jenkins"
+                    git config user.email "jenkins@example.com"
+                    git add "$file"
+                    git diff --cached --check
+
+                    if git diff --cached --quiet; then
+                        echo "${GITOPS_ENV} already points to ${GITOPS_IMAGE_TAG}"
+                        exit 0
+                    fi
+
+                    git commit -m "Deploy ${GITOPS_IMAGE_TAG} to ${GITOPS_ENV}"
+                    git push origin HEAD:gitops-dev
+                '''
+            }
+        }
+    }
+}
+
 pipeline {
 
     agent any
@@ -9,6 +73,7 @@ pipeline {
     options {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -122,159 +187,62 @@ pipeline {
 }
 
 
-stage('Update DEV GitOps Tag') {
-    steps {
-        sshagent(credentials: ['github-ssh']) {
-            sh '''
-                set -eu
-
-                echo "====================================="
-                echo "Updating DEV GitOps Image Tag"
-                echo "IMAGE_TAG: ${IMAGE_TAG}"
-                echo "====================================="
-
-                # Verify required tools and variables
-                test -n "${IMAGE_TAG}"
-                command -v git
-                command -v kustomize
-
-                # Clone the GitOps branch
-                rm -rf gitops-work
-
-                git clone --branch gitops-dev --single-branch \
-                    git@github.com:sandy24998/Project-Ironclad-Pipeline.git \
-                    gitops-work
-
-                cd gitops-work/k8s/overlays/dev
-
-                # Update the image tag in DEV overlay
-                kustomize edit set image \
-                    sandy541998/ironclad-app=sandy541998/ironclad-app:${IMAGE_TAG}
-
-                echo "Updated DEV kustomization.yaml:"
-                cat kustomization.yaml
-
-                # Verify the rendered image
-                cd ../../../
-
-                echo "Rendered DEV image:"
-                kustomize build k8s/overlays/dev | grep 'image:'
-
-                if kustomize build k8s/overlays/dev | \
-                    grep -q 'IMAGE_TAG_PLACEHOLDER'; then
-                    echo "ERROR: Image placeholder still exists!"
-                    exit 1
-                fi
-
-                # Configure Git identity
-                git config user.name "Sandeep Pandit"
-                git config user.email "54panditsandeep@gmail.com"
-
-                # Stage the GitOps change
-                git add k8s/overlays/dev/kustomization.yaml
-                git diff --cached --check
-
-                # Skip commit if nothing changed
-                if git diff --cached --quiet; then
-                    echo "GitOps image tag is already up to date."
-                    exit 0
-                fi
-
-                # Commit and push to GitOps branch
-                git commit -m "chore(gitops): update DEV image to ${IMAGE_TAG}"
-
-                git push origin HEAD:gitops-dev
-
-                echo "DEV GitOps branch updated successfully!"
-            '''
+        stage('Update DEV GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('dev', env.IMAGE_TAG)
+                }
+            }
         }
-    }
-}
 
+        stage('QA Approval') {
+            steps {
+                input(
+                    message: 'Promote build to QA?',
+                    ok: 'Promote to QA'
+                )
+            }
+        }
 
-// stage('Deploy DEV') {
-//     steps {
-//         sh '''
-//         chmod +x scripts/deploy.sh
-//         ./scripts/deploy.sh dev ${IMAGE_TAG}
-//         '''
-//     }
-// }
+        stage('Update QA GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('qa', env.IMAGE_TAG)
+                }
+            }
+        }
 
-// stage('Verify DEV Deployment') {
-//     steps {
-//         sh '''
-//         kubectl rollout status deployment/ironclad-app -n dev
-//         '''
-//     }
-// }
+        stage('UAT Approval') {
+            steps {
+                input(
+                    message: 'Promote build to UAT?',
+                    ok: 'Promote to UAT'
+                )
+            }
+        }
 
-stage('QA Approval') {
-    steps {
-        input(
-            message: 'Promote build to QA?',
-            ok: 'Deploy QA'
-        )
-    }
-}
+        stage('Update UAT GitOps Tag') {
+            steps {
+                script {
+                    updateGitOpsTag('uat', env.IMAGE_TAG)
+                }
+            }
+        }
 
-stage('Deploy QA') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh qa ${IMAGE_TAG}
-        '''
-    }
-}
-
-stage('Verify QA Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n qa
-        '''
-    }
-}
-
-stage('UAT Approval') {
-    steps {
-        input(
-            message: 'Promote build to UAT?',
-            ok: 'Deploy UAT'
-        )
-    }
-}
-
-stage('Deploy UAT') {
-    steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh uat ${IMAGE_TAG}
-        '''
-    }
-}
-
-stage('Verify UAT Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n uat
-        '''
-    }
-}
-
-stage('Release Approval') {
-    steps {
-        script {
-            def releaseVersion = input(
-                message: 'Approve Production Release',
-                ok: 'Release',
-                parameters: [
-                    string(
-                        name: 'VERSION',
-                        defaultValue: '',
-                        description: 'Enter a new release version, e.g. v1.0.2'
-                    )
-                ]
-            ).trim()
+        stage('Release Approval') {
+            steps {
+                script {
+                    def releaseVersion = input(
+                        message: 'Approve Production Release',
+                        ok: 'Release',
+                        parameters: [
+                            string(
+                                name: 'VERSION',
+                                defaultValue: '',
+                                description: 'Enter a new release version, e.g. v1.0.2'
+                            )
+                        ]
+                    ).trim()
 
             // Accept only stable vMAJOR.MINOR.PATCH release tags.
             if (!(releaseVersion ==~ /^v[0-9]+\.[0-9]+\.[0-9]+$/)) {
@@ -298,10 +266,10 @@ stage('Release Approval') {
                 error("Release tag '${releaseVersion}' already exists on origin.")
             }
 
-            env.RELEASE_VERSION = releaseVersion
+                    env.RELEASE_VERSION = releaseVersion
+                }
+            }
         }
-    }
-}
 
 stage('Retag Release Image') {
     steps {
@@ -369,20 +337,11 @@ stage('Create Git Release Tag') {
     }
 }
 
-stage('Deploy PROD') {
+stage('Update PROD GitOps Tag') {
     steps {
-        sh '''
-        chmod +x scripts/deploy.sh
-        ./scripts/deploy.sh prod ${RELEASE_VERSION}
-        '''
-    }
-}
-
-stage('Verify PROD Deployment') {
-    steps {
-        sh '''
-        kubectl rollout status deployment/ironclad-app -n prod
-        '''
+        script {
+            updateGitOpsTag('prod', env.RELEASE_VERSION)
+        }
     }
 }
 
