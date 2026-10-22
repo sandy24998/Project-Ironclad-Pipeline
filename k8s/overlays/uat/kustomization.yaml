@@ -11,4 +11,4 @@ patches:
 images:
 - name: sandy541998/ironclad-app
   newName: sandy541998/ironclad-app
-  newTag: 9-64e38f6
+  newTag: 4-8f1cf6d
